@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Financial Projections · CMR.AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:    #080f1a;
+    --panel: #0d1825;
+    --border:#1a2e42;
+    --white: #f0f6ff;
+    --muted: #4a6580;
+    --text:  #c8d8e8;
+    --base:  #3b82f6;
+    --up:    #22c55e;
+    --gold:  #d4a843;
+    --ebit:  #22d3a0;
+    --cost:  #ef4444;
+    --ccr:   #60a5fa;
+    --pb:    #38bdf8;
+    --mono:  'DM Mono', monospace;
+    --sans:  'DM Sans', sans-serif;
+    --serif: 'Playfair Display', serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--sans); font-size:14px; padding-bottom:3rem; }
+
+  .topbar {
+    background:#050c16; padding:1rem 1.2rem;
+    display:flex; justify-content:space-between; align-items:center;
+    border-bottom:1px solid var(--border); position:sticky; top:0; z-index:50;
+  }
+  .topbar-title { font-family:var(--serif); font-size:1rem; color:var(--white); font-weight:400; }
+  .topbar-title span { color:var(--gold); }
+  .topbar-meta { font-family:var(--mono); font-size:0.6rem; color:var(--muted); text-align:right; line-height:1.6; }
+
+  .tabs { display:flex; border-bottom:1px solid var(--border); }
+  .tab {
+    flex:1; padding:0.9rem; text-align:center;
+    font-family:var(--mono); font-size:0.72rem; letter-spacing:0.1em;
+    cursor:pointer; border:none; background:transparent; color:var(--muted);
+    border-bottom:3px solid transparent; transition:all 0.2s;
+  }
+  .tab.active-base { color:var(--base); border-bottom-color:var(--base); background:rgba(59,130,246,0.04); }
+  .tab.active-up   { color:var(--up);   border-bottom-color:var(--up);   background:rgba(34,197,94,0.04); }
+
+  .panel { display:none; padding:1.2rem; }
+  .panel.active { display:block; }
+
+  .scen-badge {
+    display:inline-flex; align-items:center; gap:0.5rem;
+    padding:0.5rem 0; margin-bottom:0.9rem;
+    font-family:var(--serif); font-size:1.1rem; font-weight:700;
+  }
+  .badge-dot { width:10px; height:10px; border-radius:50%; }
+
+  .kpi-strip { display:grid; grid-template-columns:1fr 1fr; gap:0.6rem; margin-bottom:1.2rem; }
+  .kpi { background:var(--panel); border:1px solid var(--border); border-radius:6px; padding:0.7rem 0.8rem; }
+  .kpi-label { font-family:var(--mono); font-size:0.58rem; letter-spacing:0.1em; color:var(--muted); margin-bottom:0.3rem; }
+  .kpi-val   { font-family:var(--serif); font-size:1.35rem; font-weight:700; line-height:1; }
+  .kpi-sub   { font-family:var(--mono); font-size:0.58rem; color:var(--muted); margin-top:0.2rem; }
+
+  .val-box {
+    border:1px solid var(--gold); border-radius:6px; padding:0.8rem 1rem;
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:1.2rem; background:rgba(212,168,67,0.04);
+  }
+  .val-label { font-family:var(--mono); font-size:0.62rem; color:var(--muted); line-height:1.7; }
+  .val-num   { font-family:var(--serif); font-size:1.5rem; font-weight:700; color:var(--gold); text-align:right; }
+  .val-num small { display:block; font-size:0.85rem; color:var(--muted); font-family:var(--mono); font-weight:400; }
+
+  .section { margin-bottom:1.5rem; }
+  .section-title {
+    font-family:var(--mono); font-size:0.6rem; letter-spacing:0.18em;
+    color:var(--muted); padding:0.45rem 0; border-bottom:1px solid var(--border);
+    margin-bottom:0.5rem; text-transform:uppercase;
+  }
+
+  table { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:0.7rem; }
+  thead th {
+    padding:0.32rem 0.4rem; text-align:center; font-weight:500;
+    color:var(--muted); font-size:0.63rem; letter-spacing:0.08em;
+    background:var(--panel); border-bottom:1px solid var(--border);
+  }
+  thead th:first-child { text-align:left; min-width:120px; }
+  tbody tr:nth-child(even) td { background:rgba(255,255,255,0.016); }
+  tbody tr:hover td { background:rgba(255,255,255,0.035); }
+  td {
+    padding:0.34rem 0.4rem; text-align:center;
+    border-bottom:1px solid rgba(26,46,66,0.5); color:var(--text); white-space:nowrap;
+  }
+  td:first-child { text-align:left; font-size:0.67rem; }
+
+  tr.sub  td { color:var(--muted); font-size:0.6rem; letter-spacing:0.1em; background:var(--panel) !important; padding-top:0.55rem; padding-bottom:0.18rem; }
+  tr.tot  td { font-weight:500; border-top:1px solid var(--border); border-bottom:2px solid var(--border); }
+  tr.grand td { font-weight:500; font-size:0.74rem; border-top:2px solid; border-bottom:2px solid; }
+  tr.hi   td { font-weight:500; }
+  tr.gap  td { height:0.35rem; border:none; background:transparent !important; }
+
+  .c-base  { color:var(--base); }
+  .c-up    { color:var(--up); }
+  .c-gold  { color:var(--gold); }
+  .c-ebit  { color:var(--ebit); }
+  .c-cost  { color:var(--cost); }
+  .c-ccr   { color:var(--ccr); }
+  .c-pb    { color:var(--pb); }
+  .c-white { color:var(--white); }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-title">CMR.AI <span>·</span> Financial Model</div>
+  <div class="topbar-meta">Y1 – Y5 PROJECTION<br>CONFIDENTIAL · FEB 2026</div>
+</div>
+
+<div class="tabs">
+  <button class="tab active-base" onclick="showTab('baseline',this)">BASELINE</button>
+  <button class="tab" onclick="showTab('upside',this)">UPSIDE</button>
+</div>
+
+
+<!-- ══════ BASELINE ══════ -->
+<div class="panel active" id="panel-baseline">
+  <div style="height:0.8rem"></div>
+  <div class="scen-badge"><div class="badge-dot" style="background:var(--base)"></div><span class="c-base">Baseline Scenario</span></div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Y5 TOTAL CLIENTS</div><div class="kpi-val c-base">116</div><div class="kpi-sub">from 6 in Y1</div></div>
+    <div class="kpi"><div class="kpi-label">Y5 COMBINED REV.</div><div class="kpi-val c-base">$29.0M</div><div class="kpi-sub">from $3.0M in Y1</div></div>
+    <div class="kpi"><div class="kpi-label">Y5 EBIT MARGIN</div><div class="kpi-val c-ebit">62.4%</div><div class="kpi-sub">from 12.5% in Y1</div></div>
+    <div class="kpi"><div class="kpi-label">Y5 NET EARNINGS</div><div class="kpi-val c-base">$13.6M</div><div class="kpi-sub">from $0.3M in Y1</div></div>
+  </div>
+
+  <div class="val-box">
+    <div class="val-label">Y5 IMPLIED VALUATION<br>Revenue Multiple</div>
+    <div class="val-num">$407M – $542M<small>15× and 20×</small></div>
+  </div>
+
+  <!-- A -->
+  <div class="section">
+    <div class="section-title">A · Client Metrics — End of Year, Cumulative</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="6">CCR</td></tr>
+        <tr><td>Tier 1 Clients</td><td>2</td><td>4</td><td>5</td><td>6</td><td>6</td></tr>
+        <tr><td>Tier 2 Clients</td><td>1</td><td>4</td><td>8</td><td>10</td><td>13</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>2</td><td>4</td><td>5</td><td>8</td></tr>
+        <tr class="tot"><td class="c-ccr">Total CCR</td><td class="c-ccr">3</td><td class="c-ccr">10</td><td class="c-ccr">17</td><td class="c-ccr">21</td><td class="c-ccr">27</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="sub"><td colspan="6">Prime Brokerage</td></tr>
+        <tr><td>Tier 1 Banks</td><td>2</td><td>3</td><td>4</td><td>4</td><td>4</td></tr>
+        <tr><td>Tier 2 Banks</td><td>1</td><td>4</td><td>8</td><td>10</td><td>12</td></tr>
+        <tr><td>Hedge Funds</td><td>—</td><td>8</td><td>19</td><td>39</td><td>59</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>1</td><td>3</td><td>8</td><td>14</td></tr>
+        <tr class="tot"><td class="c-pb">Total PB</td><td class="c-pb">3</td><td class="c-pb">16</td><td class="c-pb">34</td><td class="c-pb">61</td><td class="c-pb">89</td></tr>
+        <tr class="grand" style="border-color:var(--base)"><td class="c-base">TOTAL CLIENTS</td><td class="c-base">6</td><td class="c-base">26</td><td class="c-base">51</td><td class="c-base">82</td><td class="c-base">116</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- B -->
+  <div class="section">
+    <div class="section-title">B · Revenue &amp; Profitability ($)</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="6">CCR</td></tr>
+        <tr><td>Tier 1 Revenue</td><td>$1,400,000</td><td>$3,425,000</td><td>$4,300,000</td><td>$5,425,000</td><td>$5,400,000</td></tr>
+        <tr><td>Tier 2 Revenue</td><td>$725,000</td><td>$3,050,000</td><td>$6,400,000</td><td>$7,400,000</td><td>$9,700,000</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>$150,000</td><td>$600,000</td><td>$950,000</td><td>$1,300,000</td></tr>
+        <tr class="tot"><td class="c-ccr">Total CCR</td><td class="c-ccr">$2,125,000</td><td class="c-ccr">$6,475,000</td><td class="c-ccr">$10,700,000</td><td class="c-ccr">$12,825,000</td><td class="c-ccr">$15,100,000</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="sub"><td colspan="6">Prime Brokerage</td></tr>
+        <tr><td>Tier 1 Banks</td><td>$700,000</td><td>$2,050,000</td><td>$2,500,000</td><td>$2,400,000</td><td>$2,400,000</td></tr>
+        <tr><td>Tier 2 Banks</td><td>$212,500</td><td>$1,337,500</td><td>$2,950,000</td><td>$3,575,000</td><td>$4,275,000</td></tr>
+        <tr><td>Hedge Funds</td><td>—</td><td>$575,000</td><td>$1,306,250</td><td>$2,862,500</td><td>$4,362,500</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>$125,000</td><td>$687,500</td><td>$1,437,500</td><td>$2,875,000</td></tr>
+        <tr class="tot"><td class="c-pb">Total PB</td><td class="c-pb">$912,500</td><td class="c-pb">$4,087,500</td><td class="c-pb">$7,443,750</td><td class="c-pb">$10,275,000</td><td class="c-pb">$13,912,500</td></tr>
+        <tr class="grand" style="border-color:var(--base)"><td class="c-base">Total Combined</td><td class="c-base">$3,037,500</td><td class="c-base">$10,562,500</td><td class="c-base">$18,143,750</td><td class="c-base">$23,100,000</td><td class="c-base">$29,012,500</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="sub"><td colspan="6">Firmwide Costs</td></tr>
+        <tr><td>Compensation</td><td>$2,263,958</td><td>$4,392,208</td><td>$6,335,333</td><td>$7,297,000</td><td>$8,457,000</td></tr>
+        <tr><td>Operating Expenses</td><td>$392,625</td><td>$1,073,875</td><td>$1,648,063</td><td>$2,019,500</td><td>$2,457,875</td></tr>
+        <tr class="tot"><td class="c-cost">Total Costs</td><td class="c-cost">$2,656,583</td><td class="c-cost">$5,466,083</td><td class="c-cost">$7,983,396</td><td class="c-cost">$9,316,500</td><td class="c-cost">$10,914,875</td></tr>
+        <tr class="grand" style="border-color:var(--ebit)"><td class="c-ebit">EBIT</td><td class="c-ebit">$380,917</td><td class="c-ebit">$5,096,417</td><td class="c-ebit">$10,160,354</td><td class="c-ebit">$13,783,500</td><td class="c-ebit">$18,097,625</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- C -->
+  <div class="section">
+    <div class="section-title">C · Margin Analysis</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr><td>YoY Revenue Growth</td><td>—</td><td class="c-base">247.7%</td><td class="c-base">71.8%</td><td class="c-base">27.3%</td><td class="c-base">25.6%</td></tr>
+        <tr class="hi"><td class="c-ebit">EBIT Margin %</td><td class="c-ebit">12.5%</td><td class="c-ebit">48.3%</td><td class="c-ebit">56.0%</td><td class="c-ebit">59.7%</td><td class="c-ebit">62.4%</td></tr>
+        <tr><td>CCR Revenue Mix</td><td>70.0%</td><td>61.3%</td><td>59.0%</td><td>55.5%</td><td>52.0%</td></tr>
+        <tr><td>PB Revenue Mix</td><td>30.0%</td><td>38.7%</td><td>41.0%</td><td>44.5%</td><td>48.0%</td></tr>
+        <tr><td>Cost / Revenue Ratio</td><td>87.5%</td><td>51.7%</td><td>44.0%</td><td>40.3%</td><td>37.6%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- D -->
+  <div class="section">
+    <div class="section-title">D · Consolidated Income Statement ($)</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr class="hi"><td class="c-white">Revenue</td><td>$4,125,000</td><td>$11,212,500</td><td>$19,493,750</td><td>$24,912,500</td><td>$27,112,500</td></tr>
+        <tr><td>CCR Revenue</td><td>$2,125,000</td><td>$6,625,000</td><td>$11,300,000</td><td>$13,775,000</td><td>$16,400,000</td></tr>
+        <tr><td>PB Revenue</td><td>$2,000,000</td><td>$4,587,500</td><td>$8,193,750</td><td>$11,137,500</td><td>$10,712,500</td></tr>
+        <tr><td class="c-cost">Compensation</td><td>$2,263,958</td><td>$4,392,208</td><td>$6,335,333</td><td>$7,297,000</td><td>$8,457,000</td></tr>
+        <tr><td class="c-cost">OpEx</td><td>$392,625</td><td>$1,073,875</td><td>$1,648,063</td><td>$2,019,500</td><td>$2,457,875</td></tr>
+        <tr class="tot"><td class="c-cost">Total Costs</td><td class="c-cost">$2,656,583</td><td class="c-cost">$5,466,083</td><td class="c-cost">$7,983,396</td><td class="c-cost">$9,316,500</td><td class="c-cost">$10,914,875</td></tr>
+        <tr><td>Net Revenue</td><td>$1,468,417</td><td>$5,746,417</td><td>$11,510,354</td><td>$15,596,000</td><td>$16,197,625</td></tr>
+        <tr class="hi"><td class="c-ebit">EBITDA</td><td class="c-ebit">$380,917</td><td class="c-ebit">$5,246,417</td><td class="c-ebit">$10,760,354</td><td class="c-ebit">$14,733,500</td><td class="c-ebit">$19,397,625</td></tr>
+        <tr><td>Interest Expense</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Depreciation</td><td>$15,500</td><td>$32,500</td><td>$24,000</td><td>$11,000</td><td>$7,500</td></tr>
+        <tr><td>EBT</td><td>$365,417</td><td>$5,213,917</td><td>$10,736,354</td><td>$14,722,500</td><td>$19,390,125</td></tr>
+        <tr><td>Tax Provision</td><td>$109,625</td><td>$1,564,175</td><td>$3,220,906</td><td>$4,416,750</td><td>$5,817,038</td></tr>
+        <tr class="grand" style="border-color:var(--base)"><td class="c-base">Net Earnings</td><td class="c-base">$255,792</td><td class="c-base">$3,649,742</td><td class="c-base">$7,515,448</td><td class="c-base">$10,305,750</td><td class="c-base">$13,573,088</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="hi"><td class="c-gold">Valuation 15×</td><td colspan="4"></td><td class="c-gold">$406,687,500</td></tr>
+        <tr class="hi"><td class="c-gold">Valuation 20×</td><td colspan="4"></td><td class="c-gold">$542,250,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+<!-- ══════ UPSIDE ══════ -->
+<div class="panel" id="panel-upside">
+  <div style="height:0.8rem"></div>
+  <div class="scen-badge"><div class="badge-dot" style="background:var(--up)"></div><span class="c-up">Upside Scenario</span></div>
+
+  <div class="kpi-strip">
+    <div class="kpi"><div class="kpi-label">Y5 TOTAL CLIENTS</div><div class="kpi-val c-up">206</div><div class="kpi-sub">from 19 in Y1</div></div>
+    <div class="kpi"><div class="kpi-label">Y5 COMBINED REV.</div><div class="kpi-val c-up">$48.2M</div><div class="kpi-sub">from $6.9M in Y1</div></div>
+    <div class="kpi"><div class="kpi-label">Y5 EBIT MARGIN</div><div class="kpi-val c-ebit">65.4%</div><div class="kpi-sub">from 52.4% in Y1</div></div>
+    <div class="kpi"><div class="kpi-label">Y5 NET EARNINGS</div><div class="kpi-val c-up">$23.8M</div><div class="kpi-sub">from $2.5M in Y1</div></div>
+  </div>
+
+  <div class="val-box">
+    <div class="val-label">Y5 IMPLIED VALUATION<br>Revenue Multiple</div>
+    <div class="val-num">$680M – $907M<small>15× and 20×</small></div>
+  </div>
+
+  <!-- A -->
+  <div class="section">
+    <div class="section-title">A · Client Metrics — End of Year, Cumulative</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="6">CCR</td></tr>
+        <tr><td>Tier 1 Clients</td><td>2</td><td>4</td><td>6</td><td>6</td><td>6</td></tr>
+        <tr><td>Tier 2 Clients</td><td>6</td><td>13</td><td>17</td><td>21</td><td>26</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>3</td><td>6</td><td>10</td><td>15</td></tr>
+        <tr class="tot"><td class="c-ccr">Total CCR</td><td class="c-ccr">8</td><td class="c-ccr">20</td><td class="c-ccr">29</td><td class="c-ccr">37</td><td class="c-ccr">47</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="sub"><td colspan="6">Prime Brokerage</td></tr>
+        <tr><td>Tier 1 Banks</td><td>1</td><td>3</td><td>4</td><td>6</td><td>6</td></tr>
+        <tr><td>Tier 2 Banks</td><td>2</td><td>10</td><td>15</td><td>20</td><td>23</td></tr>
+        <tr><td>Hedge Funds</td><td>8</td><td>23</td><td>46</td><td>77</td><td>111</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>1</td><td>5</td><td>11</td><td>19</td></tr>
+        <tr class="tot"><td class="c-pb">Total PB</td><td class="c-pb">11</td><td class="c-pb">37</td><td class="c-pb">70</td><td class="c-pb">114</td><td class="c-pb">159</td></tr>
+        <tr class="grand" style="border-color:var(--up)"><td class="c-up">TOTAL CLIENTS</td><td class="c-up">19</td><td class="c-up">57</td><td class="c-up">99</td><td class="c-up">151</td><td class="c-up">206</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- B -->
+  <div class="section">
+    <div class="section-title">B · Revenue &amp; Profitability ($)</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr class="sub"><td colspan="6">CCR</td></tr>
+        <tr><td>Tier 1 Revenue</td><td>$1,400,000</td><td>$3,675,000</td><td>$5,200,000</td><td>$5,400,000</td><td>$5,400,000</td></tr>
+        <tr><td>Tier 2 Revenue</td><td>$4,000,000</td><td>$9,975,000</td><td>$12,875,000</td><td>$15,675,000</td><td>$18,850,000</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>$300,000</td><td>$900,000</td><td>$1,650,000</td><td>$2,550,000</td></tr>
+        <tr class="tot"><td class="c-ccr">Total CCR</td><td class="c-ccr">$5,400,000</td><td class="c-ccr">$13,650,000</td><td class="c-ccr">$18,075,000</td><td class="c-ccr">$21,075,000</td><td class="c-ccr">$24,250,000</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="sub"><td colspan="6">Prime Brokerage</td></tr>
+        <tr><td>Tier 1 Banks</td><td>$550,000</td><td>$1,700,000</td><td>$2,500,000</td><td>$3,650,000</td><td>$3,600,000</td></tr>
+        <tr><td>Tier 2 Banks</td><td>$512,500</td><td>$3,450,000</td><td>$5,437,500</td><td>$7,012,500</td><td>$8,162,500</td></tr>
+        <tr><td>Hedge Funds</td><td>$443,750</td><td>$1,668,750</td><td>$3,368,750</td><td>$5,593,750</td><td>$8,218,750</td></tr>
+        <tr><td>Self Serve</td><td>—</td><td>$125,000</td><td>$875,000</td><td>$2,125,000</td><td>$4,000,000</td></tr>
+        <tr class="tot"><td class="c-pb">Total PB</td><td class="c-pb">$1,506,250</td><td class="c-pb">$6,943,750</td><td class="c-pb">$12,181,250</td><td class="c-pb">$18,381,250</td><td class="c-pb">$23,981,250</td></tr>
+        <tr class="grand" style="border-color:var(--up)"><td class="c-up">Total Combined</td><td class="c-up">$6,906,250</td><td class="c-up">$20,593,750</td><td class="c-up">$30,256,250</td><td class="c-up">$39,456,250</td><td class="c-up">$48,231,250</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="sub"><td colspan="6">Firmwide Costs</td></tr>
+        <tr><td>Compensation</td><td>$2,623,958</td><td>$5,835,542</td><td>$8,500,333</td><td>$10,637,000</td><td>$12,812,000</td></tr>
+        <tr><td>Operating Expenses</td><td>$663,438</td><td>$1,786,563</td><td>$2,516,938</td><td>$3,213,438</td><td>$3,890,688</td></tr>
+        <tr class="tot"><td class="c-cost">Total Costs</td><td class="c-cost">$3,287,396</td><td class="c-cost">$7,622,104</td><td class="c-cost">$11,017,271</td><td class="c-cost">$13,850,438</td><td class="c-cost">$16,702,688</td></tr>
+        <tr class="grand" style="border-color:var(--ebit)"><td class="c-ebit">EBIT</td><td class="c-ebit">$3,618,854</td><td class="c-ebit">$12,971,646</td><td class="c-ebit">$19,238,979</td><td class="c-ebit">$25,605,813</td><td class="c-ebit">$31,528,563</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- C -->
+  <div class="section">
+    <div class="section-title">C · Margin Analysis</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr><td>YoY Revenue Growth</td><td>—</td><td class="c-up">198.2%</td><td class="c-up">46.9%</td><td class="c-up">30.4%</td><td class="c-up">22.2%</td></tr>
+        <tr class="hi"><td class="c-ebit">EBIT Margin %</td><td class="c-ebit">52.4%</td><td class="c-ebit">63.0%</td><td class="c-ebit">63.6%</td><td class="c-ebit">64.9%</td><td class="c-ebit">65.4%</td></tr>
+        <tr><td>CCR Revenue Mix</td><td>78.2%</td><td>66.3%</td><td>59.7%</td><td>53.4%</td><td>50.3%</td></tr>
+        <tr><td>PB Revenue Mix</td><td>21.8%</td><td>33.7%</td><td>40.3%</td><td>46.6%</td><td>49.7%</td></tr>
+        <tr><td>Cost / Revenue Ratio</td><td>47.6%</td><td>37.0%</td><td>36.4%</td><td>35.1%</td><td>34.6%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- D -->
+  <div class="section">
+    <div class="section-title">D · Consolidated Income Statement ($)</div>
+    <table>
+      <thead><tr><th>Metric</th><th>Y1</th><th>Y2</th><th>Y3</th><th>Y4</th><th>Y5</th></tr></thead>
+      <tbody>
+        <tr class="hi"><td class="c-white">Revenue</td><td>$7,981,250</td><td>$22,343,750</td><td>$32,700,000</td><td>$42,462,500</td><td>$45,356,250</td></tr>
+        <tr><td>CCR Revenue</td><td>$5,400,000</td><td>$13,950,000</td><td>$18,975,000</td><td>$22,725,000</td><td>$26,800,000</td></tr>
+        <tr><td>PB Revenue</td><td>$2,581,250</td><td>$8,393,750</td><td>$13,725,000</td><td>$19,737,500</td><td>$18,556,250</td></tr>
+        <tr><td class="c-cost">Compensation</td><td>$2,623,958</td><td>$5,835,542</td><td>$8,500,333</td><td>$10,637,000</td><td>$12,812,000</td></tr>
+        <tr><td class="c-cost">OpEx</td><td>$663,438</td><td>$1,786,563</td><td>$2,516,938</td><td>$3,213,438</td><td>$3,890,688</td></tr>
+        <tr class="tot"><td class="c-cost">Total Costs</td><td class="c-cost">$3,287,396</td><td class="c-cost">$7,622,104</td><td class="c-cost">$11,017,271</td><td class="c-cost">$13,850,438</td><td class="c-cost">$16,702,688</td></tr>
+        <tr><td>Net Revenue</td><td>$4,693,854</td><td>$14,721,646</td><td>$21,682,729</td><td>$28,612,063</td><td>$28,653,563</td></tr>
+        <tr class="hi"><td class="c-ebit">EBITDA</td><td class="c-ebit">$3,618,854</td><td class="c-ebit">$13,271,646</td><td class="c-ebit">$20,138,979</td><td class="c-ebit">$27,255,813</td><td class="c-ebit">$34,078,563</td></tr>
+        <tr><td>Interest Expense</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Depreciation</td><td>$16,000</td><td>$34,000</td><td>$28,500</td><td>$21,000</td><td>$21,000</td></tr>
+        <tr><td>EBT</td><td>$3,602,854</td><td>$13,237,646</td><td>$20,110,479</td><td>$27,234,813</td><td>$34,057,563</td></tr>
+        <tr><td>Tax Provision</td><td>$1,080,856</td><td>$3,971,294</td><td>$6,033,144</td><td>$8,170,444</td><td>$10,217,269</td></tr>
+        <tr class="grand" style="border-color:var(--up)"><td class="c-up">Net Earnings</td><td class="c-up">$2,521,998</td><td class="c-up">$9,266,352</td><td class="c-up">$14,077,335</td><td class="c-up">$19,064,369</td><td class="c-up">$23,840,294</td></tr>
+        <tr class="gap"><td colspan="6"></td></tr>
+        <tr class="hi"><td class="c-gold">Valuation 15×</td><td colspan="4"></td><td class="c-gold">$680,343,750</td></tr>
+        <tr class="hi"><td class="c-gold">Valuation 20×</td><td colspan="4"></td><td class="c-gold">$907,125,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+function showTab(scenario, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active-base','active-up'));
+  document.getElementById('panel-' + scenario).classList.add('active');
+  btn.classList.add(scenario === 'baseline' ? 'active-base' : 'active-up');
+}
+</script>
+</body>
+</html>
